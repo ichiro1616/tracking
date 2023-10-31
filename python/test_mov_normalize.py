@@ -53,7 +53,7 @@ try:
     params = dict()
     params["model_folder"] = "../models/"
 
-    moviefile = "hinata_side.mov"
+    moviefile = "ichiro2_back.mov"
     # params["render_pose"] = 2  #レンダーにGPUを使用する
     # params["ip_camera"] = 'rtsp://root:P7CEqNF5ui8e@10.5.5.145:554/live1s1.sdp'
     params["video"] = "../examples/movie/" + moviefile  #ファイルパス
@@ -103,7 +103,7 @@ try:
         print(counter, "枚目")
         counter += 1
         # Pop frame
-        if counter !=  240:
+        if counter !=  2700:
             datumProcessed = op.VectorDatum()
             if opWrapper.waitAndPop(datumProcessed):
                 if not args[0].no_display:
@@ -155,9 +155,11 @@ try:
                                 gavg = np.ravel(img_area[:, :, 1]).mean()
                                 bavg = np.ravel(img_area[:, :, 0]).mean()
 
-                                hsv = cv2.cvtColor(np.array([[[bavg, gavg, ravg]]], dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
-                                print("H:", hsv[0])
-                                list_output.append(hsv[0])
+                                # hsv = cv2.cvtColor(np.array([[[bavg, gavg, ravg]]], dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
+                                # print("H:", hsv[0])
+                                # list_output.append(hsv[0])
+                                list_output.append(bavg)
+
 
 
 
@@ -172,11 +174,13 @@ try:
         else:
             break;    
 
-    excel_path = r"C:\Users\isapo\openpose-1.7.0-binaries-win64-gpu-python3.7-flir-3d_recommended\openpose\examples\20x20.xlsx"
+    # excel_path = r"C:\Users\isapo\openpose-1.7.0-binaries-win64-gpu-python3.7-flir-3d_recommended\openpose\examples\20x20.xlsx"
     # excel_path = r"C:\Users\isapo\openpose-1.7.0-binaries-win64-gpu-python3.7-flir-3d_recommended\openpose\examples\distance.xlsx"
+    excel_path = r"C:\Users\isapo\openpose-1.7.0-binaries-win64-gpu-python3.7-flir-3d_recommended\openpose\examples\20x20_RGB.xlsx"
+
 
     wb = openpyxl.load_workbook(excel_path)  
-    sheet = wb.worksheets[0]
+    sheet = wb.worksheets[6]
 
     write_list_2d(sheet, list_output, 3,2) #行、列
 
