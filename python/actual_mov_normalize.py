@@ -14,7 +14,7 @@ import openpyxl
 import math
 
 
-def sim_distance(person_now, person_previous): #1フレーム前の人と色相を比較し類似度を算出
+def sim_distance(person_now, person_previous): #0フレーム目の人と色相を比較し類似度を算出
     sum_of_sqrt = 0
     for x in range(len(person_now)):
         if person_now[x] != -1 or person_previous != -1:
@@ -23,9 +23,20 @@ def sim_distance(person_now, person_previous): #1フレーム前の人と色相�
             # print(calculation_source, round((calculation_source / 180)) * 180, ring_calculate)
             sum_of_sqrt += (ring_calculate)**2
     sum_of_sqrt = math.sqrt(sum_of_sqrt)
-    print(sum_of_sqrt, sum_of_sqrt/(90 * len(person_now)))
-    return sum_of_sqrt/(90 * len(person_now))
+    bottom = math.sqrt((90)**2 * len(person_now)) #色相の差分の最大値の2乗xキーポイントの数の平方根をとっている
+    print(sum_of_sqrt, 1 - sum_of_sqrt/bottom)
+    return 1 - sum_of_sqrt/ bottom
 
+def list_tranpose(matrix): #2次元配列を転置している
+    # print(type(matrix))
+    # <class 'numpy.ndarray'>
+    matrix_np_t = matrix.T
+    # print(matrix_np_t)
+
+    matrix_np_t_list = matrix_np_t.tolist()
+    # print(type(matrix_np_t_list))
+    # <class 'list'>
+    return matrix_np_t_list
 
 try:
     # Import Openpose (Windows/Ubuntu/OSX)
@@ -49,7 +60,7 @@ try:
     params = dict()
     params["model_folder"] = "../models/"
 
-    moviefile = "ichiro_otsuka.mov"
+    moviefile = "ichiro_otsuka2.mov"
     # params["render_pose"] = 2  #レンダーにGPUを使用する
     # params["ip_camera"] = 'rtsp://root:P7CEqNF5ui8e@10.5.5.145:554/live1s1.sdp'
     params["video"] = "../examples/movie/" + moviefile  #ファイルパス
@@ -89,19 +100,22 @@ try:
     counter = 1
     # Main loop
     userWantsToExit = False
-    person_h_array_previous = []
+    person_h_array_original = []
     
     keypoint_judge =  {"鼻" : 0, "胸" : 1, "右肩" : 1, "右ひじ" : 1, "右手首" : 0, "左肩" : 1, "左ひじ" : 1, "左手首" : 0, "腰" : 1, "右腰" : 0, "右ひざ" : 1, "右足首" : 0, "左腰" : 0, "左ひざ" : 1, "左足首" : 0, "右目" : 0, "左目" : 0, "右耳" : 0, "左耳" : 0, "左親指" : 0, "左小指" : 0, "左かかと" : 0, "右親指" : 0, "右小指" : 0, "右かかと" : 0}
     while not userWantsToExit:
         person_h_array = []
         person_keypoints_array = []
+        person_keypoints_min_array = []
+        person_keypoints_max_array = []
+
         person_box_array = [[255,0,0], [0,255,0], [0,0,255], [255,255,0], [255,0,255]] #B,G,Rを人数分
         person_text_array = ["person1", "person2","person3","person4", "person5"]
         # h_list_output.append("特徴量計算場所")
         # h_list_output.append(str(counter) + "枚目")
         print("-------------------------------------------------")
         
-        print("特徴量計算場所")
+        # print("特徴量計算場所")
 
         print(counter, "枚目")
         # Pop frame
@@ -132,11 +146,14 @@ try:
 
                 h_array = []
                 keypoints_array = []
+                keypoints_min_array = []
+                keypoints_max_array = []
+
                 for d in range(len(datum.poseKeypoints)): #識別されている人数だけ回す
                     keypoints_list_output = []
                     h_list_output = []
-
-                    for i, val in enumerate(keypoint_judge.values()): #keypointの数だけ回す
+                
+                    for i, val in enumerate(keypoint_judge.values()): #keypointの数だけ回す。余裕があったらkeypoint_judgeの中で1になっている数だけ回す。また、そのindexを取得するようにしたら、1行下のif文がいらなくなる。
                         if val == 1: #keypointを使うかどうか
 
                             prob = int(datum.poseKeypoints[d][i][2] * 100)
@@ -167,63 +184,98 @@ try:
                                 hsv = cv2.cvtColor(np.array([[[bavg, gavg, ravg]]], dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
                                 # print("H:", hsv[0])
                                 h_list_output.append(hsv[0])
+
+
+
+                    list_tranpose_array = list_tranpose(datum.poseKeypoints[d])
+                    keypoint_x_array = list_tranpose_array[0] #人物を四角で囲うために全キーポイントでの最小、最大のxy座標を取得
+                    keypoint_y_array = list_tranpose_array[1]
+
+                    reli_array = list_tranpose_array[2]
+                    for rel in range(len(list_tranpose_array[2])): #各キーポイントで信頼度が一定以下なら、そのxy座標を平均化して最小、最大で取得できないようにする。
+                        if list_tranpose_array[2][rel] < 0.5:
+                            keypoint_x_array[rel] = np.mean(keypoint_x_array)
+                            keypoint_y_array[rel] = np.mean(keypoint_y_array)
+
+                
+                    keypoint_x_min = min(keypoint_x_array)
+                    keypoint_y_min = min(keypoint_y_array)
+                    keypoint_x_max = max(keypoint_x_array)
+                    keypoint_y_max = max(keypoint_y_array)
+                    # print("x_min:", keypoint_x_min, "y_min:", keypoint_y_min, "x_max:", keypoint_x_max,"y_max:", keypoint_y_max)
+
                     h_array.append(h_list_output)
                     keypoints_array.append(keypoints_list_output)
+                    keypoints_min_array.append([int(keypoint_x_min), int(keypoint_y_min)]) #float型をint型にしている
+                    keypoints_max_array.append([int(keypoint_x_max), int(keypoint_y_max)])
+
 
 
 
                 person_h_array = h_array[:]
                 person_keypoints_array = keypoints_array[:]
+                person_keypoints_min_array = keypoints_min_array[:]
+                person_keypoints_max_array = keypoints_max_array[:]
+
                 # print(len(person_h_array), len(person_keypoints_array))
+                print("---",len(person_keypoints_min_array), person_keypoints_min_array)
+
 
                 print("現フレーム：",person_h_array)
-                print("前フレーム：",person_h_array_previous)
-                if len(person_h_array_previous) == 0:
-                    person_h_array_previous = person_h_array[:]
+                print("0フレーム：",person_h_array_original)
+                if len(person_h_array_original) == 0: 
+                    person_h_array_original = person_h_array[:]
         
 
                     for d in range(len(datum.poseKeypoints)): #識別されている人数だけ回す
-                        start_x = person_keypoints_array[d][0][0] -100 #person_keypoints_array[何人目か][どこのキーポイントか][xかyか]
-                        start_y = person_keypoints_array[d][0][1]-300
-                        end_x = person_keypoints_array[d][5][0]+100
-                        end_y = person_keypoints_array[d][5][1]+300
+                        
+                        start_x = person_keypoints_min_array[d][0] #person_keypoints_min_array[何人目か][xかyか]
+                        start_y = person_keypoints_min_array[d][1]
+                        end_x = person_keypoints_max_array[d][0] #person_keypoints_max_array[何人目か][xかyか]
+                        end_y =  person_keypoints_max_array[d][1]
                         cv2.rectangle(imageToProcess,(start_x, start_y), (end_x, end_y), (person_box_array[d][0], person_box_array[d][1], person_box_array[d][2]), 10) #person_keypoints_array[何人目か][どこのキーポイントか][xかyか]
                         cv2.putText(imageToProcess, person_text_array[d], (start_x, start_y), fontFace = cv2.FONT_HERSHEY_COMPLEX, fontScale = 1.5, color = (person_box_array[d][0], person_box_array[d][1], person_box_array[d][2]))
 
 
                 else:
-                    person_h_array_list_output =[]
-                    exclusion_array = [] #1フレーム前のすでに選ばれた人の重複を避ける
+                    # person_h_array_list_output =[]
+                    exclusion_array = [] #すでに選ばれた人の重複を避ける
                     for d in range(len(datum.poseKeypoints)): #識別されている人数だけ回す
                         print(d + 1, "人目")
-                        sim_array = [] #現フレームの一人の人物に対して、1フレーム前の全員分の類似度を追加する
-                        for h in person_h_array_previous: #過去の人の人数分回す
-                            sim_array.append(sim_distance(person_h_array[d], h)) #h:1人分の色相データ、person_h_array_previous:1フレーム前の人の色相データ
-                        print(sim_array)
+                        sim_array = [] #現フレームの一人の人物に対して、0フレーム目の全員分の類似度を追加する
+                        for h in person_h_array_original: #過去の人の人数分回す
+                            sim_array.append(sim_distance(person_h_array[d], h)) #h:1人分の色相データ、person_h_array_original:0フレーム目の人の色相データ
+                        print(d + 1,"人目の類似度：",sim_array)
                         exclusion_judge = False
                         while exclusion_judge == False:
                             print("while")
                             sim_max_index = sim_array.index(max(sim_array)) #過去の何人目の人との類似度が一番高いか
-                            print(exclusion_array, sim_max_index)
-                            print(sim_max_index in exclusion_array)
-                            if((sim_max_index in exclusion_array) == True):
-                                sim_array[sim_max_index] = -1
-                                print("過去の", sim_max_index + 1, "番目の人はすでに選ばれています")
-
-                            else:
+                            # print(exclusion_array, sim_max_index)
+                            # print(sim_max_index in exclusion_array)
+                            if((sim_max_index in exclusion_array) == False and sim_array[sim_max_index] >= 0.7): #すでに選ばれている人物かどうか、類似度が0.8以上あるか
                                 exclusion_judge = True
                                 exclusion_array.append(sim_max_index)
                                 print("過去の", sim_max_index + 1, "番目の人と類似度が一番近い")
+
+                            else:
+                                sim_array[sim_max_index] = -1
+                                print("過去の", sim_max_index + 1, "番目の人に一番類似していますが、すでに選ばれているか類似度が一定以下です")
+                                if sim_array.count(-1) == len(sim_array): #過去のどの人物とも類似していなかった場合
+                                    person_h_array_original.append(person_h_array[d]) #新しい人物として追加
+                                    print("過去のどの人物とも類似しませんでした。", len(person_h_array_original), "人目として登録")
+
+                                    sim_max_index = d 
+                                    break
                         
-                        start_x = person_keypoints_array[d][0][0] -100
-                        start_y = person_keypoints_array[d][0][1]-300
-                        end_x = person_keypoints_array[d][5][0]+100
-                        end_y = person_keypoints_array[d][5][1]+300
+                        start_x = person_keypoints_min_array[d][0]
+                        start_y = person_keypoints_min_array[d][1]
+                        end_x = person_keypoints_max_array[d][0]
+                        end_y =  person_keypoints_max_array[d][1]
                         cv2.rectangle(imageToProcess,(start_x, start_y), (end_x, end_y), (person_box_array[sim_max_index][0], person_box_array[sim_max_index][1], person_box_array[sim_max_index][2]), 10)
                         cv2.putText(imageToProcess, person_text_array[sim_max_index], (start_x, start_y), fontFace = cv2.FONT_HERSHEY_COMPLEX, fontScale = 1.5, color = (person_box_array[sim_max_index][0], person_box_array[sim_max_index][1], person_box_array[sim_max_index][2]))
-                        person_h_array_list_output.append(person_h_array[sim_max_index])
+                        # person_h_array_list_output.append(person_h_array[sim_max_index])
                     
-                    person_h_array_previous = person_h_array_list_output[:]
+                    # person_h_array_original = person_h_array_list_output[:]
                 cv2.imshow("OpenPose 1.7.0 - Tutorial Python API", imageToProcess)
 
                 key = cv2.waitKey(1)
@@ -237,22 +289,3 @@ try:
 except Exception as e:
     print(e)
     sys.exit(-1)
-
-
-# def sim_distance(prefs, person1, person2):
-#     # person1とperson2が共に評価してるもののリスト
-#     si = {}
-
-#     for item in prefs[person1]:
-#         if item in prefs[person2]:
-#             si[item] = 1
-
-#     # person1とperson2がどちらも評価してるものが無ければ類似性は0
-#     if len(si) == 0 :
-#         return 0
-
-#     # 各項目ごとの差の平方
-#     squares = [(prefs[person1][item] - prefs[person2][item]) ** 2 for item in si]
-#     sum_of_sqrt = math.sqrt(sum(squares))
-#     return 1/(1 + sum_of_sqrt)
-
