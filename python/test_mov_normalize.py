@@ -112,13 +112,13 @@ try:
                     imageToProcess = datum.cvInputData
 
                     #首と腰のキーポイントを利用して画像をリサイズする。
-                    keypoint_neck_x = int(datum.poseKeypoints[0][1][0])
-                    keypoint_neck_y = int(datum.poseKeypoints[0][1][1])
+                    keypoint_chest_x = int(datum.poseKeypoints[0][1][0])
+                    keypoint_chest_y = int(datum.poseKeypoints[0][1][1])
 
                     keypoint_hip_x = int(datum.poseKeypoints[0][8][0])
                     keypoint_hip_y = int(datum.poseKeypoints[0][8][1])
 
-                    sekitui = math.sqrt((keypoint_hip_x - keypoint_neck_x) ** 2  + (keypoint_hip_y - keypoint_neck_y) ** 2)
+                    sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
 
                     threshold = 80.0 #首から腰までを80pxにするという基準値
 
