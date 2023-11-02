@@ -120,7 +120,7 @@ try:
 
                     sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
 
-                    threshold = 80.0 #首から腰までを80pxにするという基準値
+                    threshold = 80.0 #胸から腰までを80pxにするという基準値
 
                     if sekitui != 0:
                         resize_rate = round(threshold / sekitui, 2)

@@ -38,6 +38,23 @@ def list_tranpose(matrix): #2次元配列を転置している
     # <class 'list'>
     return matrix_np_t_list
 
+def search_minmax(list_tr): #信頼度が一定以上のキーポイントの中で最小最大の値をxy座標ごとに返す
+    keypoint_x_array = list_tr[0] #人物を四角で囲うために全キーポイントでの最小、最大のxy座標を取得
+    keypoint_y_array = list_tr[1]
+    reli_array = list_tr[2]
+    for rel in range(len(reli_array)): #各キーポイントで信頼度が一定以下なら、そのxy座標を平均化して最小、最大で取得できないようにする。
+        if list_tr[2][rel] < 0.5:
+            keypoint_x_array[rel] = np.mean(keypoint_x_array)
+            keypoint_y_array[rel] = np.mean(keypoint_y_array)
+
+
+    keypoint_x_min = min(keypoint_x_array)
+    keypoint_y_min = min(keypoint_y_array)
+    keypoint_x_max = max(keypoint_x_array)
+    keypoint_y_max = max(keypoint_y_array)
+    return [keypoint_x_min, keypoint_y_min], [keypoint_x_max, keypoint_y_max]
+
+
 try:
     # Import Openpose (Windows/Ubuntu/OSX)
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -66,7 +83,7 @@ try:
     params["video"] = "../examples/movie/" + moviefile  #ファイルパス
 
     # params["render_threshold"] = 0.05  #レンダーするキーポイントのスレッショルド
-    params["write_video"] = "../examples/movie/output_no_tracking_" + moviefile
+    params["write_video"] = "../examples/movie/output_tracking_" + moviefile
     # params["net_resolution"] = "-1x512"
     params["number_people_max"] = 5
     params["write_json"] = "../examples/json"
@@ -110,7 +127,6 @@ try:
         person_keypoints_max_array = []
 
         person_box_array = [[255,0,0], [0,255,0], [0,0,255], [255,255,0], [255,0,255]] #B,G,Rを人数分
-        person_text_array = ["person1", "person2","person3","person4", "person5"]
         # h_list_output.append("特徴量計算場所")
         # h_list_output.append(str(counter) + "枚目")
         print("-------------------------------------------------")
@@ -124,26 +140,7 @@ try:
             if not args[0].no_display:
                 datum = datumProcessed[0]
                 imageToProcess = datum.cvInputData
-                # print(len(datum.poseKeypoints))
-                #首と腰のキーポイントを利用して画像をリサイズする。
-                # keypoint_chest_x = int(datum.poseKeypoints[0][1][0])
-                # keypoint_chest_y = int(datum.poseKeypoints[0][1][1])
-
-                # keypoint_hip_x = int(datum.poseKeypoints[0][8][0])
-                # keypoint_hip_y = int(datum.poseKeypoints[0][8][1])
-
-                # sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
-                # print("1人目脊椎:", sekitui)
-                
-                # keypoint_chest_x = int(datum.poseKeypoints[1][1][0])
-                # keypoint_chest_y = int(datum.poseKeypoints[1][1][1])
-
-                # keypoint_hip_x = int(datum.poseKeypoints[1][8][0])
-                # keypoint_hip_y = int(datum.poseKeypoints[1][8][1])
-
-                # sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
-                # print("2人目脊椎:", sekitui)
-
+            
                 h_array = []
                 keypoints_array = []
                 keypoints_min_array = []
@@ -152,14 +149,39 @@ try:
                 for d in range(len(datum.poseKeypoints)): #識別されている人数だけ回す
                     keypoints_list_output = []
                     h_list_output = []
+
+
+                    # list_tranpose_array_normalize = list_tranpose(datum.poseKeypoints[d]) #キーポイントデータを転置してlistにしている
+                    # keypoint_minmax_normalize = search_minmax(list_tranpose_array_normalize)
+                    # # print(keypoint_minmax)
+                    
+                    # # 首と腰のキーポイントを利用して画像をリサイズする。
+                    # keypoint_chest_x = int(datum.poseKeypoints[d][1][0])
+                    # keypoint_chest_y = int(datum.poseKeypoints[d][1][1])
+                    # keypoint_hip_x = int(datum.poseKeypoints[d][8][0])
+                    # keypoint_hip_y = int(datum.poseKeypoints[d][8][1])
+                    
+                    # sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
+                    # print(d + 1, "人目脊椎:", sekitui)
+                    # person_image = imageToProcess[int(keypoint_minmax_normalize[0][1]) : int(keypoint_minmax_normalize[1][1]), int(keypoint_minmax_normalize[0][0]) : int(keypoint_minmax_normalize[1][0])]
+                    
+                    # threshold = 200.0 #胸から腰までを80pxにするという基準値
+
+                    # resize_rate = round(threshold / sekitui, 2)
+                    # img_resize = cv2.resize(person_image, (int(person_image.shape[1] * resize_rate), int(person_image.shape[0] * resize_rate)))
+                    # print(resize_rate)
+    
+                    # datum.cvInputData = img_resize
+
+
                 
-                    for i, val in enumerate(keypoint_judge.values()): #keypointの数だけ回す。余裕があったらkeypoint_judgeの中で1になっている数だけ回す。また、そのindexを取得するようにしたら、1行下のif文がいらなくなる。
+                    for i, val in enumerate(keypoint_judge.values()): #keypointの数だけ回す。余裕があったらkeypoint_judgeの中で1になっている数だけ回す。そのindexを取得するようにしたら、1行下のif文がいらなくなる。
                         if val == 1: #keypointを使うかどうか
 
                             prob = int(datum.poseKeypoints[d][i][2] * 100)
 
-                            width_r =25 #半径  一人ひとり試していた時はsekitui = 80px width,height_r = 10で試していたが、このコードではリサイズしていない、sekituiがデフォルトで200
-                            height_r =25 #半径
+                            width_r =10 #半径  一人ひとり試していた時はsekitui = 80px width,height_r = 10で試していたが、このコードではリサイズしていない、sekituiがデフォルトで200
+                            height_r =10 #半径
 
                             if(prob == 0):
                                 keypoints_list_output.append([-1, -1])
@@ -170,8 +192,9 @@ try:
                                 keypoint_x = int(datum.poseKeypoints[d][i][0])
                                 keypoint_y = int(datum.poseKeypoints[d][i][1])
                                 keypoints_list_output.append([keypoint_x, keypoint_y])
-
-                                # img_area = img_resize[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
+                                # print(keypoint_x, keypoint_y)
+                                # img_area = person_image[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
+                                # print("|||||",img_area.shape[1], "||||", img_area.shape[0])
                                 img_area = imageToProcess[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
 
                                 rsum,gsum,bsum = 0.0,0.0,0.0
@@ -180,34 +203,24 @@ try:
                                 ravg = np.ravel(img_area[:, :, 2]).mean() 
                                 gavg = np.ravel(img_area[:, :, 1]).mean()
                                 bavg = np.ravel(img_area[:, :, 0]).mean()
+                                # print(img_area[:, :, 2])
+                                # print(img_area[:, :, 1])
+                                # print(img_area[:, :, 0])
+
 
                                 hsv = cv2.cvtColor(np.array([[[bavg, gavg, ravg]]], dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
                                 # print("H:", hsv[0])
                                 h_list_output.append(hsv[0])
 
-
-
-                    list_tranpose_array = list_tranpose(datum.poseKeypoints[d])
-                    keypoint_x_array = list_tranpose_array[0] #人物を四角で囲うために全キーポイントでの最小、最大のxy座標を取得
-                    keypoint_y_array = list_tranpose_array[1]
-
-                    reli_array = list_tranpose_array[2]
-                    for rel in range(len(list_tranpose_array[2])): #各キーポイントで信頼度が一定以下なら、そのxy座標を平均化して最小、最大で取得できないようにする。
-                        if list_tranpose_array[2][rel] < 0.5:
-                            keypoint_x_array[rel] = np.mean(keypoint_x_array)
-                            keypoint_y_array[rel] = np.mean(keypoint_y_array)
-
-                
-                    keypoint_x_min = min(keypoint_x_array)
-                    keypoint_y_min = min(keypoint_y_array)
-                    keypoint_x_max = max(keypoint_x_array)
-                    keypoint_y_max = max(keypoint_y_array)
-                    # print("x_min:", keypoint_x_min, "y_min:", keypoint_y_min, "x_max:", keypoint_x_max,"y_max:", keypoint_y_max)
+                    list_tranpose_array = list_tranpose(datum.poseKeypoints[d]) #キーポイントデータを転置してlistにしている
+                    
+                    keypoint_minmax = search_minmax(list_tranpose_array)
+                    # print(keypoint_minmax)
 
                     h_array.append(h_list_output)
                     keypoints_array.append(keypoints_list_output)
-                    keypoints_min_array.append([int(keypoint_x_min), int(keypoint_y_min)]) #float型をint型にしている
-                    keypoints_max_array.append([int(keypoint_x_max), int(keypoint_y_max)])
+                    keypoints_min_array.append([int(keypoint_minmax[0][0]), int(keypoint_minmax[0][1])]) #float型をint型にしている
+                    keypoints_max_array.append([int(keypoint_minmax[1][0]), int(keypoint_minmax[1][1])])
 
 
 
@@ -233,8 +246,8 @@ try:
                         start_y = person_keypoints_min_array[d][1]
                         end_x = person_keypoints_max_array[d][0] #person_keypoints_max_array[何人目か][xかyか]
                         end_y =  person_keypoints_max_array[d][1]
-                        cv2.rectangle(imageToProcess,(start_x, start_y), (end_x, end_y), (person_box_array[d][0], person_box_array[d][1], person_box_array[d][2]), 10) #person_keypoints_array[何人目か][どこのキーポイントか][xかyか]
-                        cv2.putText(imageToProcess, person_text_array[d], (start_x, start_y), fontFace = cv2.FONT_HERSHEY_COMPLEX, fontScale = 1.5, color = (person_box_array[d][0], person_box_array[d][1], person_box_array[d][2]))
+                        cv2.rectangle(imageToProcess,(start_x, start_y), (end_x, end_y), (person_box_array[d][0], person_box_array[d][1], person_box_array[d][2]), 5) #person_keypoints_array[何人目か][どこのキーポイントか][xかyか]
+                        cv2.putText(imageToProcess, "person_" + str(d + 1), (start_x, start_y), fontFace = cv2.FONT_HERSHEY_COMPLEX, fontScale = 1.5, color = (person_box_array[d][0], person_box_array[d][1], person_box_array[d][2]))
 
 
                 else:
@@ -271,8 +284,8 @@ try:
                         start_y = person_keypoints_min_array[d][1]
                         end_x = person_keypoints_max_array[d][0]
                         end_y =  person_keypoints_max_array[d][1]
-                        cv2.rectangle(imageToProcess,(start_x, start_y), (end_x, end_y), (person_box_array[sim_max_index][0], person_box_array[sim_max_index][1], person_box_array[sim_max_index][2]), 10)
-                        cv2.putText(imageToProcess, person_text_array[sim_max_index], (start_x, start_y), fontFace = cv2.FONT_HERSHEY_COMPLEX, fontScale = 1.5, color = (person_box_array[sim_max_index][0], person_box_array[sim_max_index][1], person_box_array[sim_max_index][2]))
+                        cv2.rectangle(imageToProcess,(start_x, start_y), (end_x, end_y), (person_box_array[sim_max_index][0], person_box_array[sim_max_index][1], person_box_array[sim_max_index][2]), 5)
+                        cv2.putText(imageToProcess, "person_" + str(sim_max_index + 1), (start_x, start_y), fontFace = cv2.FONT_HERSHEY_COMPLEX, fontScale = 1.5, color = (person_box_array[sim_max_index][0], person_box_array[sim_max_index][1], person_box_array[sim_max_index][2]))
                         # person_h_array_list_output.append(person_h_array[sim_max_index])
                     
                     # person_h_array_original = person_h_array_list_output[:]
