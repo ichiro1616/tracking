@@ -77,7 +77,7 @@ try:
     params = dict()
     params["model_folder"] = "../models/"
 
-    moviefile = "ichiro_otsuka2.mov"
+    moviefile = "haru_hinata_updown2.mov"
     # params["render_pose"] = 2  #レンダーにGPUを使用する
     # params["ip_camera"] = 'rtsp://root:P7CEqNF5ui8e@10.5.5.145:554/live1s1.sdp'
     params["video"] = "../examples/movie/" + moviefile  #ファイルパス
@@ -151,76 +151,80 @@ try:
                     h_list_output = []
 
 
-                    # list_tranpose_array_normalize = list_tranpose(datum.poseKeypoints[d]) #キーポイントデータを転置してlistにしている
-                    # keypoint_minmax_normalize = search_minmax(list_tranpose_array_normalize)
+                    list_tranpose_array_normalize = list_tranpose(datum.poseKeypoints[d]) #キーポイントデータを転置してlistにしている
+                    keypoint_minmax_normalize = search_minmax(list_tranpose_array_normalize)
                     # # print(keypoint_minmax)
                     
-                    # # 首と腰のキーポイントを利用して画像をリサイズする。
-                    # keypoint_chest_x = int(datum.poseKeypoints[d][1][0])
-                    # keypoint_chest_y = int(datum.poseKeypoints[d][1][1])
-                    # keypoint_hip_x = int(datum.poseKeypoints[d][8][0])
-                    # keypoint_hip_y = int(datum.poseKeypoints[d][8][1])
+                    # 首と腰のキーポイントを利用して画像をリサイズする。
+                    keypoint_chest_x = int(datum.poseKeypoints[d][1][0])
+                    keypoint_chest_y = int(datum.poseKeypoints[d][1][1])
+                    keypoint_hip_x = int(datum.poseKeypoints[d][8][0])
+                    keypoint_hip_y = int(datum.poseKeypoints[d][8][1])
                     
-                    # sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
-                    # print(d + 1, "人目脊椎:", sekitui)
-                    # person_image = imageToProcess[int(keypoint_minmax_normalize[0][1]) : int(keypoint_minmax_normalize[1][1]), int(keypoint_minmax_normalize[0][0]) : int(keypoint_minmax_normalize[1][0])]
+                    sekitui = math.sqrt((keypoint_hip_x - keypoint_chest_x) ** 2  + (keypoint_hip_y - keypoint_chest_y) ** 2)
+                    print(d + 1, "人目脊椎:", sekitui)
+
+                    if sekitui != 0:
+
+                        person_image = imageToProcess[int(keypoint_minmax_normalize[0][1]) : int(keypoint_minmax_normalize[1][1]), int(keypoint_minmax_normalize[0][0]) : int(keypoint_minmax_normalize[1][0])]
+                        
+                        threshold = 200.0 #胸から腰までを80pxにするという基準値
+
+                        resize_rate = round(threshold / sekitui, 2)
+                        img_resize = cv2.resize(person_image, (int(person_image.shape[1] * resize_rate), int(person_image.shape[0] * resize_rate)))
+                        print(resize_rate,"|",img_resize.shape[1], "|",img_resize.shape[0])
+        
+                        datum.cvInputData = img_resize
+
+
+
                     
-                    # threshold = 200.0 #胸から腰までを80pxにするという基準値
+                        for i, val in enumerate(keypoint_judge.values()): #keypointの数だけ回す。余裕があったらkeypoint_judgeの中で1になっている数だけ回す。そのindexを取得するようにしたら、1行下のif文がいらなくなる。
+                            if val == 1: #keypointを使うかどうか
 
-                    # resize_rate = round(threshold / sekitui, 2)
-                    # img_resize = cv2.resize(person_image, (int(person_image.shape[1] * resize_rate), int(person_image.shape[0] * resize_rate)))
-                    # print(resize_rate)
-    
-                    # datum.cvInputData = img_resize
+                                prob = int(datum.poseKeypoints[d][i][2] * 100)
 
+                                width_r =25 #半径  一人ひとり試していた時はsekitui = 80px width,height_r = 10で試していたが、このコードではリサイズしていない、sekituiがデフォルトで200
+                                height_r =25 #半径
 
-                
-                    for i, val in enumerate(keypoint_judge.values()): #keypointの数だけ回す。余裕があったらkeypoint_judgeの中で1になっている数だけ回す。そのindexを取得するようにしたら、1行下のif文がいらなくなる。
-                        if val == 1: #keypointを使うかどうか
-
-                            prob = int(datum.poseKeypoints[d][i][2] * 100)
-
-                            width_r =10 #半径  一人ひとり試していた時はsekitui = 80px width,height_r = 10で試していたが、このコードではリサイズしていない、sekituiがデフォルトで200
-                            height_r =10 #半径
-
-                            if(prob == 0):
-                                keypoints_list_output.append([-1, -1])
-                                h_list_output.append(-1)
+                                if(prob == 0):
+                                    keypoints_list_output.append([-1, -1])
+                                    h_list_output.append(-1)
 
 
-                            else:
-                                keypoint_x = int(datum.poseKeypoints[d][i][0])
-                                keypoint_y = int(datum.poseKeypoints[d][i][1])
-                                keypoints_list_output.append([keypoint_x, keypoint_y])
-                                # print(keypoint_x, keypoint_y)
-                                # img_area = person_image[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
-                                # print("|||||",img_area.shape[1], "||||", img_area.shape[0])
-                                img_area = imageToProcess[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
+                                else:
+                                    keypoint_x = int(datum.poseKeypoints[d][i][0] - keypoint_minmax_normalize[0][0])
+                                    keypoint_y = int(datum.poseKeypoints[d][i][1] - keypoint_minmax_normalize[0][1])
+                                    keypoints_list_output.append([keypoint_x, keypoint_y])
+                                    # print(keypoint_x, keypoint_y,  keypoint_minmax_normalize[0][1], keypoint_minmax_normalize[1][1])
+                                    img_area = person_image[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
+                                    # print("|||||",img_area.shape[1], "||||", img_area.shape[0])
+                                    # img_area = imageToProcess[keypoint_y - height_r : keypoint_y + height_r, keypoint_x - width_r : keypoint_x + width_r]
 
-                                rsum,gsum,bsum = 0.0,0.0,0.0
+                                    rsum,gsum,bsum = 0.0,0.0,0.0
 
-                                #画像の範囲指定をしたimg_areaからRGBをそれぞれ2次元配列で全px分取得。それをravelで1次元化してから平均を取得している
-                                ravg = np.ravel(img_area[:, :, 2]).mean() 
-                                gavg = np.ravel(img_area[:, :, 1]).mean()
-                                bavg = np.ravel(img_area[:, :, 0]).mean()
-                                # print(img_area[:, :, 2])
-                                # print(img_area[:, :, 1])
-                                # print(img_area[:, :, 0])
+                                    #画像の範囲指定をしたimg_areaからRGBをそれぞれ2次元配列で全px分取得。それをravelで1次元化してから平均を取得している
+                                    ravg = np.ravel(img_area[:, :, 2]).mean() 
+                                    gavg = np.ravel(img_area[:, :, 1]).mean()
+                                    bavg = np.ravel(img_area[:, :, 0]).mean()
+                                    # print(img_area[:, :, 2])
+                                    # print(img_area[:, :, 1])
+                                    # print(img_area[:, :, 0])
 
 
-                                hsv = cv2.cvtColor(np.array([[[bavg, gavg, ravg]]], dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
-                                # print("H:", hsv[0])
-                                h_list_output.append(hsv[0])
+                                    hsv = cv2.cvtColor(np.array([[[bavg, gavg, ravg]]], dtype=np.uint8), cv2.COLOR_BGR2HSV)[0][0]
+                                    # print("H:", hsv[0])
+                                    h_list_output.append(hsv[0])
 
-                    list_tranpose_array = list_tranpose(datum.poseKeypoints[d]) #キーポイントデータを転置してlistにしている
-                    
-                    keypoint_minmax = search_minmax(list_tranpose_array)
-                    # print(keypoint_minmax)
+                        list_tranpose_array = list_tranpose(datum.poseKeypoints[d]) #キーポイントデータを転置してlistにしている
+                        
+                        keypoint_minmax = search_minmax(list_tranpose_array)
+                        # print(keypoint_minmax)
 
-                    h_array.append(h_list_output)
-                    keypoints_array.append(keypoints_list_output)
-                    keypoints_min_array.append([int(keypoint_minmax[0][0]), int(keypoint_minmax[0][1])]) #float型をint型にしている
-                    keypoints_max_array.append([int(keypoint_minmax[1][0]), int(keypoint_minmax[1][1])])
+                        h_array.append(h_list_output)
+                        keypoints_array.append(keypoints_list_output)
+                        keypoints_min_array.append([int(keypoint_minmax[0][0]), int(keypoint_minmax[0][1])]) #float型をint型にしている
+                        keypoints_max_array.append([int(keypoint_minmax[1][0]), int(keypoint_minmax[1][1])])
 
 
 
