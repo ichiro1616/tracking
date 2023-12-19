@@ -8,8 +8,6 @@ import math
 
 
 
-# datasetの読み込み
-wine_data = datasets.load_wine()
 
 
 #input file name
@@ -23,7 +21,6 @@ num_sheet = len(input_sheet_name)
 #シートの数とシートの名前のリストの表示
 print ("Sheet の数:", num_sheet)
 print (input_sheet_name)
-#DataFrameとしてsheet1枚のデータ(2019)を読込み
 input_sheet_df = input_book.parse(input_sheet_name[0])
 # print(input_sheet_df.shape[0])
 
@@ -81,15 +78,15 @@ for ind in range(1, input_sheet_df.shape[0], step):
     # plt.show()
     print(X_norm.shape)
     # 結果を出力
-    plt.scatter(X_norm[:,6],X_norm[:,7], c=result.labels_)
+    # plt.scatter(X_norm[:,0],X_norm[:,1], c=result.labels_)
 
     centers = cls.cluster_centers_
-    plt.scatter(centers[:, 6], centers[:, 7], s=100,
-                facecolors='none', edgecolors='black')
-    plt.xlim(-5, 5)
-    plt.ylim(-5, 5)
-    plt.grid()
-    print(centers)
+    # plt.scatter(centers[:, 0], centers[:, 1], s=100,
+    #             facecolors='none', edgecolors='black')
+    # plt.xlim(-5, 5)
+    # plt.ylim(-5, 5)
+    # plt.grid()
+    # print(centers)
     mean_x =0
     mean_y =0
     for j in range(len(centers)):
@@ -97,10 +94,10 @@ for ind in range(1, input_sheet_df.shape[0], step):
         mean_y += centers[j][1]
     mean_x = mean_x /len(centers)
     mean_y = mean_y /len(centers)
-    plt.scatter(mean_x, mean_y, s=100,
-            facecolors='none', edgecolors='red')
-    plt.savefig("../examples/image_program_output/pattern1_rightknee_leftknee_plot_" + str(input_sheet_df["frame"][ind]) + "-" + str(input_sheet_df["frame"][ind + end]) + ".png")
-    plt.show()
+    # plt.scatter(mean_x, mean_y, s=100,
+    #         facecolors='none', edgecolors='red')
+    # plt.savefig("../examples/image_program_output/pattern2_chest_hip_plot_" + str(input_sheet_df["frame"][ind]) + "-" + str(input_sheet_df["frame"][ind + end]) + ".png")
+    # plt.show()
     
     
     sqrt_sum =0.0
@@ -118,8 +115,10 @@ for ind in range(1, input_sheet_df.shape[0], step):
 # plt.ylim(0, 5)
 # plt.grid()
 plt.plot(frame_steparray,sqrt_sumarray,marker='o')
-plt.xlabel('frame')
-plt.ylabel('sqrt_sum')
+plt.xlabel('フレーム数', fontname="MS Gothic")
+plt.ylabel('各クラスターの重心までの距離の総和', fontname="MS Gothic")
+plt.ylim(2, 8)
+
 plt.savefig("../examples/image_program_output/pattern1.png")
 
 plt.show()
